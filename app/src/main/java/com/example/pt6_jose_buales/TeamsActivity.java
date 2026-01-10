@@ -1,10 +1,5 @@
 package com.example.pt6_jose_buales;
 
-import android.content.Context;
-import android.net.ConnectivityManager;
-import android.net.NetworkCapabilities;
-import android.net.NetworkInfo;
-import android.os.Build;
 import android.os.Bundle;
 import android.widget.Toast;
 
@@ -35,10 +30,11 @@ public class TeamsActivity extends AppCompatActivity {
 
         RecyclerView recyclerView = findViewById(R.id.viewLlista);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        TeamAdapter adapter = new TeamAdapter(teams, this);
-        recyclerView.setAdapter(adapter);
 
-        String lliga = getIntent().getStringExtra("LLIGA");
+        String lliga = getIntent().getStringExtra("LLIGA"); // <-- recogemos la liga
+
+        TeamAdapter adapter = new TeamAdapter(teams, this, lliga); // <-- pasamos 3 argumentos
+        recyclerView.setAdapter(adapter);
 
         String url = "https://www.vidalibarraquer.net/android/sports/" + lliga + ".json";
 
@@ -49,34 +45,29 @@ public class TeamsActivity extends AppCompatActivity {
         }
     }
 
-    // ===== Comprovar connexió =====
     private boolean hiHaConnexio() {
-        ConnectivityManager cm =
-                (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        android.net.ConnectivityManager cm =
+                (android.net.ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            NetworkCapabilities caps = cm.getNetworkCapabilities(cm.getActiveNetwork());
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            android.net.NetworkCapabilities caps = cm.getNetworkCapabilities(cm.getActiveNetwork());
             return caps != null &&
-                    (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
-                            || caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR));
+                    (caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)
+                            || caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR));
         } else {
-            NetworkInfo net = cm.getActiveNetworkInfo();
+            android.net.NetworkInfo net = cm.getActiveNetworkInfo();
             return net != null && net.isConnectedOrConnecting();
         }
     }
 
-    // ===== Carregar JSON =====
     private void loadData(RecyclerView recyclerView, String url) {
-        if (queue == null) {
-            queue = Volley.newRequestQueue(this);
-        }
+        if (queue == null) queue = Volley.newRequestQueue(this);
 
         JsonObjectRequest request = new JsonObjectRequest(url,
                 response -> {
                     try {
                         teams.clear();
                         JSONArray array = response.getJSONArray("data");
-
                         for (int i = 0; i < array.length(); i++) {
                             JSONObject obj = array.getJSONObject(i);
                             teams.add(new Team(

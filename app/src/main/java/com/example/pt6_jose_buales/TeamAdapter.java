@@ -16,10 +16,13 @@ public class TeamAdapter extends RecyclerView.Adapter<TeamAdapter.ViewHolder> {
 
     private final List<Team> teams;
     private final Context context;
+    private final String lliga;  // <-- guardamos la liga
 
-    public TeamAdapter(List<Team> teams, Context context) {
+    // Constructor
+    public TeamAdapter(List<Team> teams, Context context, String lliga) {
         this.teams = teams;
         this.context = context;
+        this.lliga = lliga;  // recibimos la liga
     }
 
     @NonNull
@@ -35,10 +38,11 @@ public class TeamAdapter extends RecyclerView.Adapter<TeamAdapter.ViewHolder> {
         Team team = teams.get(position);
         holder.txtNom.setText(team.getName());
 
+        // Click en el elemento
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(context, TeamDetailActivity.class);
             intent.putExtra("CODI", team.getCode());
-            intent.putExtra("LLIGA", context.getIntent().getStringExtra("LLIGA"));
+            intent.putExtra("LLIGA", lliga);  // <-- usamos la variable pasada
             context.startActivity(intent);
         });
     }
@@ -48,6 +52,7 @@ public class TeamAdapter extends RecyclerView.Adapter<TeamAdapter.ViewHolder> {
         return teams.size();
     }
 
+    // ===== ViewHolder =====
     public static class ViewHolder extends RecyclerView.ViewHolder {
         TextView txtNom;
 
