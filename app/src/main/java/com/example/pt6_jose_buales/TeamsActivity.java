@@ -31,11 +31,15 @@ public class TeamsActivity extends AppCompatActivity {
         RecyclerView recyclerView = findViewById(R.id.viewLlista);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        String lliga = getIntent().getStringExtra("LLIGA"); // <-- recogemos la liga
+        // Obtener la liga desde el Intent (puedes fijar "mlb" para pruebas)
+        String lliga = getIntent().getStringExtra("LLIGA");
+        if (lliga == null) lliga = "mlb"; // fallback si no viene nada
 
-        TeamAdapter adapter = new TeamAdapter(teams, this, lliga); // <-- pasamos 3 argumentos
+        // Crear el adapter pasando lista, context y liga
+        TeamAdapter adapter = new TeamAdapter(teams, this, lliga);
         recyclerView.setAdapter(adapter);
 
+        // URL JSON
         String url = "https://www.vidalibarraquer.net/android/sports/" + lliga + ".json";
 
         if (hiHaConnexio()) {
@@ -45,6 +49,7 @@ public class TeamsActivity extends AppCompatActivity {
         }
     }
 
+    // ===== Comprobar conexión a Internet =====
     private boolean hiHaConnexio() {
         android.net.ConnectivityManager cm =
                 (android.net.ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
@@ -60,6 +65,7 @@ public class TeamsActivity extends AppCompatActivity {
         }
     }
 
+    // ===== Cargar datos desde JSON =====
     private void loadData(RecyclerView recyclerView, String url) {
         if (queue == null) queue = Volley.newRequestQueue(this);
 
@@ -67,21 +73,35 @@ public class TeamsActivity extends AppCompatActivity {
                 response -> {
                     try {
                         teams.clear();
-                        JSONArray array = response.getJSONArray("data");
+
+                        // Aquí usamos "teams" como nombre del array
+                        JSONArray array = response.getJSONArray("teams");
+
                         for (int i = 0; i < array.length(); i++) {
                             JSONObject obj = array.getJSONObject(i);
+
+                            // Mapear team_abbreviation → code, team_name → nombre
                             teams.add(new Team(
-                                    obj.getString("code"),
-                                    obj.getString("name")
+                                    obj.getString("team_abbreviation"),
+                                    obj.getString("team_name")
                             ));
                         }
+
                         recyclerView.getAdapter().notifyDataSetChanged();
+
                     } catch (JSONException e) {
                         e.printStackTrace();
+                        Toast.makeText(TeamsActivity.this,
+                                "Error JSON: " + e.getMessage(),
+                                Toast.LENGTH_LONG).show();
                     }
                 },
-                error -> Toast.makeText(this, "Error carregant dades", Toast.LENGTH_SHORT).show()
-        );
+                error -> {
+                    Toast.makeText(TeamsActivity.this,
+                            "Volley error: " + error.toString(),
+                            Toast.LENGTH_LONG).show();
+                    error.printStackTrace();
+                });
 
         queue.add(request);
     }
