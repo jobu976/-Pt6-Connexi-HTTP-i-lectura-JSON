@@ -1,6 +1,6 @@
 package com.example.pt6_jose_buales;
 
-import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -8,91 +8,76 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.android.volley.RequestQueue;
-import com.android.volley.toolbox.ImageRequest;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 
-import org.json.JSONException;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
-public class TeamDetailActivity extends AppCompatActivity {
+import java.io.InputStream;
+import java.net.URL;
+import java.util.concurrent.Executors;
 
-    private RequestQueue queue;
+public class TeamDetailActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_team_detail);
 
-        ImageView imgEscut = findViewById(R.id.imgEscut);
-        TextView txtEstadi = findViewById(R.id.txtEstadi);
-        TextView txtTitols = findViewById(R.id.txtTitols);
+        TextView txtTitles = findViewById(R.id.txtTitles);
+        TextView txtStadium = findViewById(R.id.txtStadium);
+        ImageView imgShield = findViewById(R.id.imgShield);
 
         String lliga = getIntent().getStringExtra("LLIGA");
-        String codi = getIntent().getStringExtra("CODI");
+        String codi = getIntent().getStringExtra("CODI").toLowerCase();
 
-        String url = "https://www.vidalibarraquer.net/android/sports/"
-                + lliga + "/" + codi.toLowerCase() + ".json";
+        String jsonUrl = "https://www.vidalibarraquer.net/android/sports/"
+                + lliga + "/" + codi + ".json";
 
-        if (hiHaConnexio()) {
-            loadData(url, imgEscut, txtEstadi, txtTitols);
-        } else {
-            Toast.makeText(this, "No hi ha connexió a Internet", Toast.LENGTH_LONG).show();
-        }
-    }
+        String imageUrl = "https://www.vidalibarraquer.net/android/sports/"
+                + lliga + "/" + codi + ".png";
 
-    // ===== Carregar JSON =====
-    private void loadData(String url, ImageView imgEscut,
-                          TextView txtEstadi, TextView txtTitols) {
-
-        if (queue == null) {
-            queue = Volley.newRequestQueue(this);
-        }
-
-        JsonObjectRequest request = new JsonObjectRequest(url,
+        JsonObjectRequest request = new JsonObjectRequest(jsonUrl,
                 response -> {
                     try {
-                        String stadium = response.getString("stadium");
-                        int titles = response.getInt("titles");
-                        String badgeUrl = response.getString("badge");
+                        JSONArray data = response.getJSONArray("data");
+                        JSONObject team = data.getJSONObject(0);
 
-                        txtEstadi.setText("Estadi: " + stadium);
-                        txtTitols.setText("Títols: " + titles);
+                        String titles = team.getString("titles");
+                        String stadium = team.getString("team_stadium");
 
-                        // Cargar imagen con Volley ImageRequest
-                        ImageRequest imageRequest = new ImageRequest(
-                                badgeUrl,
-                                bitmap -> imgEscut.setImageBitmap(bitmap),
-                                0, 0, ImageView.ScaleType.CENTER_INSIDE,
-                                Bitmap.Config.ARGB_8888,
-                                error -> Toast.makeText(this, "Error carregant escut", Toast.LENGTH_SHORT).show()
-                        );
-                        queue.add(imageRequest);
+                        txtTitles.setText("Títols: " + titles);
+                        txtStadium.setText("Estadi: " + stadium);
 
-                    } catch (JSONException e) {
+                        // Cargar imagen SIN Glide
+                        Executors.newSingleThreadExecutor().execute(() -> {
+                            try {
+                                InputStream is = new URL(imageUrl).openStream();
+                                imgShield.post(() ->
+                                        imgShield.setImageBitmap(
+                                                BitmapFactory.decodeStream(is)
+                                        ));
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        });
+
+                    } catch (Exception e) {
                         e.printStackTrace();
+                        Toast.makeText(this,
+                                "Error llegint el JSON",
+                                Toast.LENGTH_LONG).show();
                     }
                 },
-                error -> Toast.makeText(this, "Error carregant detall", Toast.LENGTH_SHORT).show()
+                error -> {
+                    Toast.makeText(this,
+                            "Error carregant dades",
+                            Toast.LENGTH_LONG).show();
+                    error.printStackTrace();
+                }
         );
 
-        queue.add(request);
-    }
-
-    // ===== Comprovar connexió =====
-    private boolean hiHaConnexio() {
-        android.net.ConnectivityManager cm =
-                (android.net.ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            android.net.NetworkCapabilities caps = cm.getNetworkCapabilities(cm.getActiveNetwork());
-            return caps != null &&
-                    (caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)
-                            || caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR));
-        } else {
-            android.net.NetworkInfo net = cm.getActiveNetworkInfo();
-            return net != null && net.isConnectedOrConnecting();
-        }
+        Volley.newRequestQueue(this).add(request);
     }
 }
